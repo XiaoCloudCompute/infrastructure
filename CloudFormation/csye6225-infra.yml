@@ -5,6 +5,30 @@ Parameters:
     Description: "CIDR block for VPC"
     Type: String
     Default: "10.0.0.0/16"
+  VpcSubnet1CidrBlock:
+    Description: "CIDR block for VPC subnet 1"
+    Type: String
+    Default: "10.0.0.0/24"
+  VpcSubnet1AvailabilityZone:
+    Description: "Availability Zone for VPC subnet 1"
+    Type: String
+    Default: "us-east-1a"
+  VpcSubnet2CidrBlock:
+    Description: "CIDR block for VPC subnet 2"
+    Type: String
+    Default: "10.0.1.0/24"
+  VpcSubnet2AvailabilityZone:
+    Description: "Availability Zone for VPC subnet 2"
+    Type: String
+    Default: "us-east-1b"
+  VpcSubnet3CidrBlock:
+    Description: "CIDR block for VPC subnet 3"
+    Type: String
+    Default: "10.0.2.0/24"
+  VpcSubnet3AvailabilityZone:
+    Description: "Availability Zone for VPC subnet 3"
+    Type: String
+    Default: "us-east-1c"
 Resources:
   myVPC:
     Type: AWS::EC2::VPC
@@ -21,8 +45,8 @@ Resources:
     Properties:
       VpcId:
         Ref: myVPC
-      CidrBlock: 10.0.0.0/24
-      AvailabilityZone: "us-east-1a"
+      CidrBlock: !Ref VpcSubnet1CidrBlock
+      AvailabilityZone: !Ref VpcSubnet1AvailabilityZone
       Tags:
       - Key: Name
         Value: !Ref AWS::StackName
@@ -31,8 +55,8 @@ Resources:
     Properties:
       VpcId:
         Ref: myVPC
-      CidrBlock: 10.0.1.0/24
-      AvailabilityZone: "us-east-1b"
+      CidrBlock: !Ref VpcSubnet2CidrBlock
+      AvailabilityZone: !Ref VpcSubnet2AvailabilityZone
       Tags:
       - Key: Name
         Value: !Ref AWS::StackName
@@ -41,8 +65,8 @@ Resources:
     Properties:
       VpcId:
         Ref: myVPC
-      CidrBlock: 10.0.2.0/24
-      AvailabilityZone: "us-east-1c"
+      CidrBlock: !Ref VpcSubnet3CidrBlock
+      AvailabilityZone: !Ref VpcSubnet3AvailabilityZone
       Tags:
       - Key: Name
         Value: !Ref AWS::StackName
