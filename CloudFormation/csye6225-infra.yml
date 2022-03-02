@@ -29,6 +29,14 @@ Parameters:
     Description: "Availability Zone for VPC subnet 3"
     Type: String
     Default: "us-east-1c"
+  ImageId:
+    Description: "Image id"
+    Type: String
+    Default: "ami-033b95fb8079dc481"
+  KeyName:
+    Description: "Key pair name for ec2"
+    Type: String
+    Default: "default"
 Resources:
   myVPC:
     Type: AWS::EC2::VPC
@@ -99,6 +107,75 @@ Resources:
         Ref: myGateway
       RouteTableId: 
         Ref: myRouteTable
+  myFirstSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId:
+        Ref: myRouteTable
+      SubnetId:
+        Ref: myFirstSubnet
+  mySecondSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId:
+        Ref: myRouteTable
+      SubnetId:
+        Ref: mySecondSubnet
+  myThirdSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId:
+        Ref: myRouteTable
+      SubnetId:
+        Ref: myThirdSubnet
+  mySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow http to client host
+        VpcId:
+          Ref: myVPC
+        SecurityGroupEgress:
+          - IpProtocol: tcp
+            FromPort: 1024
+            ToPort: 65535
+            CidrIp: 0.0.0.0/0
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 8080
+            ToPort: 8080
+            CidrIp: 0.0.0.0/0
+  myEc2Instance: 
+    Type: AWS::EC2::Instance
+    DependsOn: myGatewayAttachment
+    Properties: 
+      ImageId: !Ref ImageId
+      DisableApiTermination: false
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      BlockDeviceMappings: 
+        - DeviceName: "/dev/xvdh"
+          Ebs: 
+            VolumeType: "gp2"
+            VolumeSize: "20"
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet: 
+            - Ref: mySecurityGroup
+          SubnetId: 
+            Ref: myFirstSubnet
 
 Outputs:
   VpcId:

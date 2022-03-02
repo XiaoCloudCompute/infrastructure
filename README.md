@@ -14,10 +14,10 @@ export AWS_PROFILE=dev
 
 - create stack
 ```shell
-aws cloudformation create-stack --stack-name my-vpc --template-body file://CloudFormation/csye6225-infra.yml
+aws cloudformation create-stack --stack-name my-vpc --parameters ParameterKey=ImageId,ParameterValue=ami-09a73752624b96ca5 --template-body file://CloudFormation/csye6225-infra.yml --profile=demo
 ```
 
 - delete stack
 ```shell
-aws cloudformation delete-stack --stack-name my-vpc
+aws cloudformation delete-stack --stack-name my-vpc --profile=demo
 ```
