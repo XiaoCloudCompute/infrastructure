@@ -1,6 +1,13 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: CSYE 6225 Demo
 Parameters:
+  Env:
+    Type: String
+    Description: Select the appropriate environment
+    AllowedValues:
+      - dev
+      - prod
+    Default: "dev"
   VpcCidrBlock:
     Description: "CIDR block for VPC"
     Type: String
@@ -9,26 +16,26 @@ Parameters:
     Description: "CIDR block for VPC subnet 1"
     Type: String
     Default: "10.0.0.0/24"
-  VpcSubnet1AvailabilityZone:
-    Description: "Availability Zone for VPC subnet 1"
-    Type: String
-    Default: "us-east-1a"
   VpcSubnet2CidrBlock:
     Description: "CIDR block for VPC subnet 2"
     Type: String
     Default: "10.0.1.0/24"
-  VpcSubnet2AvailabilityZone:
-    Description: "Availability Zone for VPC subnet 2"
-    Type: String
-    Default: "us-east-1b"
   VpcSubnet3CidrBlock:
     Description: "CIDR block for VPC subnet 3"
     Type: String
     Default: "10.0.2.0/24"
-  VpcSubnet3AvailabilityZone:
-    Description: "Availability Zone for VPC subnet 3"
+  VpcPrivateSubnet1CidrBlock:
+    Description: "CIDR block for VPC private subnet 1"
     Type: String
-    Default: "us-east-1c"
+    Default: "10.0.3.0/24"
+  VpcPrivateSubnet2CidrBlock:
+    Description: "CIDR block for VPC private subnet 2"
+    Type: String
+    Default: "10.0.4.0/24"
+  VpcPrivateSubnet3CidrBlock:
+    Description: "CIDR block for VPC private subnet 3"
+    Type: String
+    Default: "10.0.5.0/24"
   ImageId:
     Description: "Image id"
     Type: String
@@ -37,6 +44,21 @@ Parameters:
     Description: "Key pair name for ec2"
     Type: String
     Default: "default"
+  DatabaseUsername:
+    Description: "Username of Database"
+    Type: String
+    Default: "csye6225"
+  DatabasePassword:
+    Description: "Password of Database"
+    Type: String
+    Default: "#Ovixa9bXYpb"
+    NoEcho: "true"
+  DatabaseName:
+    Description: "Name of Database"
+    Type: String
+    Default: "csye6225"
+    NoEcho: "true"
+
 Resources:
   myVPC:
     Type: AWS::EC2::VPC
@@ -54,30 +76,60 @@ Resources:
       VpcId:
         Ref: myVPC
       CidrBlock: !Ref VpcSubnet1CidrBlock
-      AvailabilityZone: !Ref VpcSubnet1AvailabilityZone
+      AvailabilityZone: !Select [0, !GetAZs  '' ]
       Tags:
       - Key: Name
-        Value: !Ref AWS::StackName
+        Value: Public Subnet (AZ1)
   mySecondSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
         Ref: myVPC
       CidrBlock: !Ref VpcSubnet2CidrBlock
-      AvailabilityZone: !Ref VpcSubnet2AvailabilityZone
+      AvailabilityZone: !Select [1, !GetAZs  '' ]
       Tags:
       - Key: Name
-        Value: !Ref AWS::StackName
+        Value: Public Subnet (AZ2)
   myThirdSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
         Ref: myVPC
       CidrBlock: !Ref VpcSubnet3CidrBlock
-      AvailabilityZone: !Ref VpcSubnet3AvailabilityZone
+      AvailabilityZone: !Select [2, !GetAZs  '' ]
       Tags:
       - Key: Name
-        Value: !Ref AWS::StackName
+        Value: Public Subnet (AZ3)
+  myFirstPrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock: !Ref VpcPrivateSubnet1CidrBlock
+      AvailabilityZone: !Select [0, !GetAZs  '' ]
+      Tags:
+      - Key: Name
+        Value: Private Subnet (AZ1)
+  mySecondPrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock: !Ref VpcPrivateSubnet2CidrBlock
+      AvailabilityZone: !Select [1, !GetAZs  '' ]
+      Tags:
+      - Key: Name
+        Value: Private Subnet (AZ2)
+  myThirdPrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock: !Ref VpcPrivateSubnet3CidrBlock
+      AvailabilityZone: !Select [2, !GetAZs  '' ]
+      Tags:
+      - Key: Name
+        Value: Private Subnet (AZ3)
   myGateway:
     Type: AWS::EC2::InternetGateway
     Properties: 
@@ -128,16 +180,53 @@ Resources:
         Ref: myRouteTable
       SubnetId:
         Ref: myThirdSubnet
-  mySecurityGroup:
+  myPrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: !Ref AWS::StackName
+      VpcId: 
+        Ref: myVPC
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref myPrivateRouteTable1
+      SubnetId: !Ref myFirstPrivateSubnet
+  myPrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: !Ref AWS::StackName
+      VpcId: 
+        Ref: myVPC
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref myPrivateRouteTable2
+      SubnetId: !Ref mySecondPrivateSubnet
+  myPrivateRouteTable3:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: !Ref AWS::StackName
+      VpcId: 
+        Ref: myVPC
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref myPrivateRouteTable3
+      SubnetId: !Ref myThirdPrivateSubnet
+  myApplicationSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
         GroupDescription: Allow http to client host
         VpcId:
           Ref: myVPC
         SecurityGroupEgress:
-          - IpProtocol: tcp
-            FromPort: 1024
-            ToPort: 65535
+          - IpProtocol: "-1"
             CidrIp: 0.0.0.0/0
         SecurityGroupIngress:
           - IpProtocol: tcp
@@ -156,6 +245,116 @@ Resources:
             FromPort: 8080
             ToPort: 8080
             CidrIp: 0.0.0.0/0
+  myDatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow database connection
+        VpcId:
+          Ref: myVPC
+        SecurityGroupEgress:
+          - IpProtocol: tcp
+            FromPort: 1024
+            ToPort: 65535
+            CidrIp: 0.0.0.0/0
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 3306
+            ToPort: 3306
+            SourceSecurityGroupId: 
+              Ref: myApplicationSecurityGroup
+  myS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Join ['.', [!Select [2, !Split ['/', !Ref AWS::StackId]], !Ref Env, "huanlinxiao.me"]]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: "AES256"
+
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransferRule
+            Status: Enabled
+            ExpirationInDays: 365
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+  myRDSDBParameterGroup:
+    Type: 'AWS::RDS::DBParameterGroup'
+    Properties:
+      Description: MYSQL Parameter Group
+      Family: mysql8.0
+      Parameters:
+        sql_mode: IGNORE_SPACE
+        innodb_buffer_pool_size: '{DBInstanceClassMemory*3/4}'
+  myDBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupDescription: My dbs subnet group
+      SubnetIds: 
+        - !Ref myFirstPrivateSubnet
+        - !Ref mySecondPrivateSubnet
+        - !Ref myThirdPrivateSubnet
+  myRDS:
+    Type: AWS::RDS::DBInstance
+    Properties: 
+      AllocatedStorage: 20
+      BackupRetentionPeriod: 0
+      DBInstanceClass: db.t2.micro
+      DBInstanceIdentifier: cye6225
+      DBName: cye6225
+      DBParameterGroupName: !Ref myRDSDBParameterGroup
+      DBSubnetGroupName: !Ref myDBSubnetGroup
+      Engine: mysql
+      EngineVersion: "8.0.28"
+      MasterUsername: !Ref DatabaseUsername
+      MasterUserPassword: !Ref DatabasePassword
+      MultiAZ: "false"
+      Port: "3306"
+      PubliclyAccessible: "false"
+      StorageType: "gp2"
+      VPCSecurityGroups: 
+        - !Ref myDatabaseSecurityGroup
+  myIAMPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: WebAppS3
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "s3:PutObject"
+              - "s3:PutObjectAcl"
+              - "s3:GetObject"
+              - "s3:GetObjectAcl"
+              - "s3:GetObjectAttributes"
+              - "s3:DeleteObject"
+            Resource: 
+              - !Sub ["arn:aws:s3:::${BUCKET_NAME}", BUCKET_NAME: !Ref myS3Bucket]
+              - !Sub ["arn:aws:s3:::${BUCKET_NAME}/*", BUCKET_NAME: !Ref myS3Bucket]
+  ec2Role: 
+    Type: "AWS::IAM::Role"
+    Properties: 
+      RoleName: "EC2-CSYE6225"
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal: 
+              Service: 
+                - "ec2.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - !Ref myIAMPolicy
+  myInstanceProfile: 
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      Roles: 
+        - Ref: "ec2Role"
   myEc2Instance: 
     Type: AWS::EC2::Instance
     DependsOn: myGatewayAttachment
@@ -173,11 +372,44 @@ Resources:
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
           GroupSet: 
-            - Ref: mySecurityGroup
+            - Ref: myApplicationSecurityGroup
           SubnetId: 
             Ref: myFirstSubnet
+      IamInstanceProfile: !Ref myInstanceProfile
+      UserData:
+        Fn::Base64: 
+          !Sub 
+            - |
+              #!/bin/bash
+              cat > /home/ec2-user/env.env << EOF
+              BUCKET_NAME=${BUCKET_NAME}
+              DATABASE_ADDRESS=${DATABASE_ADDRESS} 
+              DATABASE_PORT=${DATABASE_PORT}
+              DATABASE_USERNAME=${DATABASE_USERNAME}
+              DATABASE_PASSWORD=${DATABASE_PASSWORD}
+              DATABASE_NAME=${DATABASE_NAME}
+              AWS_REGION=${AWS_REGION}
+              EOF
+
+              systemctl start web_service
+            - BUCKET_NAME: !Ref myS3Bucket
+              DATABASE_ADDRESS: !GetAtt myRDS.Endpoint.Address
+              DATABASE_PORT: !GetAtt myRDS.Endpoint.Port
+              DATABASE_USERNAME: !Ref DatabaseUsername
+              DATABASE_PASSWORD: !Ref DatabasePassword
+              DATABASE_NAME: !Ref DatabaseName
+              AWS_REGION: !Ref AWS::Region
 
 Outputs:
   VpcId:
     Description: The VPC ID
     Value: !Ref myVPC
+  BucketName:
+    Description: The Bucket Name
+    Value: !Ref myS3Bucket
+  DatabaseAddress:
+    Description: The Database address
+    Value: !GetAtt myRDS.Endpoint.Address
+  DatabasePort:
+    Description: The Database Port
+    Value: !GetAtt myRDS.Endpoint.Port
