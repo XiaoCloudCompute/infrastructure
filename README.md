@@ -19,6 +19,6 @@ aws cloudformation create-stack --stack-name my-vpc --parameters ParameterKey=Im
 
 - delete stack(rm bucket objects at first)
 ```shell
-aws s3 rm s3://bucket-name --recursive
+aws s3 rm s3://bucket-name --recursive --profile=demo
 aws cloudformation delete-stack --stack-name my-vpc --profile=demo
 ```
