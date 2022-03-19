@@ -58,6 +58,10 @@ Parameters:
     Type: String
     Default: "csye6225"
     NoEcho: "true"
+  DomainName:
+    Description: "Name of Domain"
+    Type: String
+    Default: "huanlinxiao.me."
 
 Resources:
   myVPC:
@@ -232,19 +236,13 @@ Resources:
           - IpProtocol: tcp
             FromPort: 22
             ToPort: 22
-            CidrIp: 0.0.0.0/0
-          - IpProtocol: tcp
-            FromPort: 80
-            ToPort: 80
-            CidrIp: 0.0.0.0/0
-          - IpProtocol: tcp
-            FromPort: 443
-            ToPort: 443
-            CidrIp: 0.0.0.0/0
+            SourceSecurityGroupId: 
+              Ref: myLoadBalancerSecurityGroup
           - IpProtocol: tcp
             FromPort: 8080
             ToPort: 8080
-            CidrIp: 0.0.0.0/0
+            SourceSecurityGroupId: 
+              Ref: myLoadBalancerSecurityGroup
   myDatabaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -266,6 +264,7 @@ Resources:
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: Delete
     Properties:
+      AccessControl: "Private"
       BucketName: !Join ['.', [!Select [2, !Split ['/', !Ref AWS::StackId]], !Ref Env, "huanlinxiao.me"]]
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -355,50 +354,204 @@ Resources:
     Properties: 
       Roles: 
         - Ref: "ec2Role"
-  myEc2Instance: 
-    Type: AWS::EC2::Instance
+  myLoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Load balancer
+        VpcId:
+          Ref: myVPC
+        SecurityGroupEgress:
+          - IpProtocol: "-1"
+            CidrIp: 0.0.0.0/0
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: 0.0.0.0/0
+  myLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
+      Name: !Sub ${AWS::StackName}-load-balancer
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref myLoadBalancerSecurityGroup
+      Subnets:
+        - !Ref myFirstSubnet
+        - !Ref mySecondSubnet
+      Tags:
+        - Key: Application
+          Value: WebApp
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-load-balancer
+      Type: application
+  myLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref myLoadBalancerTargetGroup
+      LoadBalancerArn: !Ref myLoadBalancer
+      Port: 80
+      Protocol: HTTP
+  myLoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 60
+      HealthCheckPath: '/healthz'
+      HealthCheckPort: '8080'
+      HealthCheckProtocol: 'HTTP'
+      HealthCheckTimeoutSeconds: 30
+      HealthyThresholdCount: 2
+      IpAddressType: ipv4
+      Name: !Sub ${AWS::StackName}-lb-tg
+      Port: 8080
+      Protocol: 'HTTP'
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-lb-tg
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '20'
+      TargetType: instance
+      UnhealthyThresholdCount: 2
+      VpcId: 
+        Ref: myVPC
+  myLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
     DependsOn: myGatewayAttachment
-    Properties: 
-      ImageId: !Ref ImageId
-      DisableApiTermination: false
-      InstanceType: t2.micro
-      KeyName: !Ref KeyName
-      BlockDeviceMappings: 
-        - DeviceName: "/dev/xvdh"
-          Ebs: 
-            VolumeType: "gp2"
-            VolumeSize: "20"
-      NetworkInterfaces: 
-        - AssociatePublicIpAddress: "true"
-          DeviceIndex: "0"
-          GroupSet: 
-            - Ref: myApplicationSecurityGroup
-          SubnetId: 
-            Ref: myFirstSubnet
-      IamInstanceProfile: !Ref myInstanceProfile
-      UserData:
-        Fn::Base64: 
-          !Sub 
-            - |
-              #!/bin/bash
-              cat > /home/ec2-user/env.env << EOF
-              BUCKET_NAME=${BUCKET_NAME}
-              DATABASE_ADDRESS=${DATABASE_ADDRESS} 
-              DATABASE_PORT=${DATABASE_PORT}
-              DATABASE_USERNAME=${DATABASE_USERNAME}
-              DATABASE_PASSWORD=${DATABASE_PASSWORD}
-              DATABASE_NAME=${DATABASE_NAME}
-              AWS_REGION=${AWS_REGION}
-              EOF
+    Properties:
+      LaunchTemplateName: !Sub '${AWS::StackName}-launch-template'
+      LaunchTemplateData:
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvdh
+            Ebs:
+              VolumeSize: 20
+              VolumeType: "gp2"
+              DeleteOnTermination: true
+        ImageId: !Ref ImageId
+        InstanceType: t2.micro
+        KeyName: !Ref KeyName
+        SecurityGroupIds: 
+          - Ref: myApplicationSecurityGroup
+        IamInstanceProfile: 
+          Arn: !GetAtt myInstanceProfile.Arn
+        UserData:
+          Fn::Base64: 
+            !Sub 
+              - |
+                #!/bin/bash
+                cat > /home/ec2-user/env.env << EOF
+                BUCKET_NAME=${BUCKET_NAME}
+                DATABASE_ADDRESS=${DATABASE_ADDRESS} 
+                DATABASE_PORT=${DATABASE_PORT}
+                DATABASE_USERNAME=${DATABASE_USERNAME}
+                DATABASE_PASSWORD=${DATABASE_PASSWORD}
+                DATABASE_NAME=${DATABASE_NAME}
+                AWS_REGION=${AWS_REGION}
+                EOF
 
-              systemctl start web_service
-            - BUCKET_NAME: !Ref myS3Bucket
-              DATABASE_ADDRESS: !GetAtt myRDS.Endpoint.Address
-              DATABASE_PORT: !GetAtt myRDS.Endpoint.Port
-              DATABASE_USERNAME: !Ref DatabaseUsername
-              DATABASE_PASSWORD: !Ref DatabasePassword
-              DATABASE_NAME: !Ref DatabaseName
-              AWS_REGION: !Ref AWS::Region
+                systemctl start web_service
+              - BUCKET_NAME: !Ref myS3Bucket
+                DATABASE_ADDRESS: !GetAtt myRDS.Endpoint.Address
+                DATABASE_PORT: !GetAtt myRDS.Endpoint.Port
+                DATABASE_USERNAME: !Ref DatabaseUsername
+                DATABASE_PASSWORD: !Ref DatabasePassword
+                DATABASE_NAME: !Ref DatabaseName
+                AWS_REGION: !Ref AWS::Region
+  myWebAppScaleGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub ${AWS::StackName}-asg
+      Cooldown: '60'
+      DesiredCapacity: 3
+      HealthCheckGracePeriod: 30
+      HealthCheckType: EC2
+      LaunchTemplate:
+        LaunchTemplateId: !Ref myLaunchTemplate
+        Version: !GetAtt myLaunchTemplate.LatestVersionNumber
+      MaxSize: 5
+      MinSize: 3
+      Tags:
+        - Key: Application
+          Value: WebApp
+          PropagateAtLaunch: "true"
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-asg
+          PropagateAtLaunch: "true"
+      TargetGroupARNs:
+        - !Ref myLoadBalancerTargetGroup
+      VPCZoneIdentifier:
+        - !Ref myFirstSubnet
+        - !Ref mySecondSubnet
+        - !Ref myThirdSubnet
+
+  myCPUUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref myWebAppScaleGroup
+      Cooldown: 60
+      ScalingAdjustment: 1
+
+  myCPUDownPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref myWebAppScaleGroup
+      Cooldown: 60
+      ScalingAdjustment: -1
+
+  myCPUUpAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties: 
+      AlarmActions: 
+        - !Ref myCPUUpPolicy
+      AlarmDescription: Scale up if cpu > 5%
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 2
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Period: 180 
+      Statistic: Average
+      Threshold: 5
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref myWebAppScaleGroup
+
+  myCPUDownAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties: 
+      AlarmActions: 
+        - !Ref myCPUDownPolicy
+      AlarmDescription: Scale down if cpu < 3%
+      ComparisonOperator: LessThanThreshold
+      EvaluationPeriods: 2
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Period: 180 
+      Statistic: Average
+      Threshold: 3
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref myWebAppScaleGroup
+
+  myDomainRecords:
+    Type: AWS::Route53::RecordSet
+    Properties: 
+      HostedZoneName: !Ref DomainName
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget: 
+        DNSName: !GetAtt myLoadBalancer.DNSName
+        HostedZoneId: !GetAtt myLoadBalancer.CanonicalHostedZoneID
 
 Outputs:
   VpcId:
