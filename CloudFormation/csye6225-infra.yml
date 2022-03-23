@@ -7,7 +7,7 @@ Parameters:
     AllowedValues:
       - dev
       - prod
-    Default: "dev"
+    Default: "prod"
   VpcCidrBlock:
     Description: "CIDR block for VPC"
     Type: String
@@ -61,7 +61,7 @@ Parameters:
   DomainName:
     Description: "Name of Domain"
     Type: String
-    Default: "huanlinxiao.me."
+    Default: "prod.huanlinxiao.me."
 
 Resources:
   myVPC:
@@ -374,6 +374,7 @@ Resources:
             CidrIp: 0.0.0.0/0
   myLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DependsOn: myGatewayAttachment
     Properties:
       IpAddressType: ipv4
       LoadBalancerAttributes:
@@ -471,14 +472,14 @@ Resources:
     Properties:
       AutoScalingGroupName: !Sub ${AWS::StackName}-asg
       Cooldown: '60'
-      DesiredCapacity: 3
+      DesiredCapacity: 1
       HealthCheckGracePeriod: 30
       HealthCheckType: EC2
       LaunchTemplate:
         LaunchTemplateId: !Ref myLaunchTemplate
         Version: !GetAtt myLaunchTemplate.LatestVersionNumber
-      MaxSize: 5
-      MinSize: 3
+      MaxSize: 3
+      MinSize: 1
       Tags:
         - Key: Application
           Value: WebApp
@@ -519,7 +520,7 @@ Resources:
       EvaluationPeriods: 2
       MetricName: CPUUtilization
       Namespace: AWS/EC2
-      Period: 180 
+      Period: 120 
       Statistic: Average
       Threshold: 5
       Dimensions:
@@ -536,7 +537,7 @@ Resources:
       EvaluationPeriods: 2
       MetricName: CPUUtilization
       Namespace: AWS/EC2
-      Period: 180 
+      Period: 120 
       Statistic: Average
       Threshold: 3
       Dimensions:
