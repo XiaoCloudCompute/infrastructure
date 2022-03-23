@@ -437,11 +437,16 @@ Resources:
               VolumeSize: 20
               VolumeType: "gp2"
               DeleteOnTermination: true
+        NetworkInterfaces: 
+          - AssociatePublicIpAddress: "true"
+            DeviceIndex: "0"
+            Groups: 
+              - Ref: myApplicationSecurityGroup
+            SubnetId: 
+              Ref: myFirstSubnet
         ImageId: !Ref ImageId
         InstanceType: t2.micro
         KeyName: !Ref KeyName
-        SecurityGroupIds: 
-          - Ref: myApplicationSecurityGroup
         IamInstanceProfile: 
           Arn: !GetAtt myInstanceProfile.Arn
         UserData:
