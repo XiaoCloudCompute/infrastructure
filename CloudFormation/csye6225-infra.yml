@@ -233,11 +233,10 @@ Resources:
           - IpProtocol: "-1"
             CidrIp: 0.0.0.0/0
         SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort: 22
-            ToPort: 22
-            SourceSecurityGroupId: 
-              Ref: myLoadBalancerSecurityGroup
+          # - IpProtocol: tcp
+          #   FromPort: 22
+          #   ToPort: 22
+          #   CidrIp: 0.0.0.0/0
           - IpProtocol: tcp
             FromPort: 8080
             ToPort: 8080
@@ -330,9 +329,12 @@ Resources:
               - "s3:GetObjectAcl"
               - "s3:GetObjectAttributes"
               - "s3:DeleteObject"
+              - "s3:List*"
             Resource: 
               - !Sub ["arn:aws:s3:::${BUCKET_NAME}", BUCKET_NAME: !Ref myS3Bucket]
               - !Sub ["arn:aws:s3:::${BUCKET_NAME}/*", BUCKET_NAME: !Ref myS3Bucket]
+              - "arn:aws:s3:::codedeploy.huanlinxiao.me"
+              - "arn:aws:s3:::codedeploy.huanlinxiao.me/*"
   ec2Role: 
     Type: "AWS::IAM::Role"
     Properties: 
@@ -558,6 +560,47 @@ Resources:
       AliasTarget: 
         DNSName: !GetAtt myLoadBalancer.DNSName
         HostedZoneId: !GetAtt myLoadBalancer.CanonicalHostedZoneID
+
+  myCodeDeployRole: 
+    Type: "AWS::IAM::Role"
+    Properties: 
+      RoleName: "CodeDeployServiceRole"
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal: 
+              Service: 
+                - "codedeploy.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole
+  myCodeDeploy:
+    Type: AWS::CodeDeploy::Application
+    Properties: 
+      ApplicationName: csye6225-webapp
+      ComputePlatform: Server
+  myCodeDeployGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties: 
+      ApplicationName: !Ref myCodeDeploy
+      AutoScalingGroups:
+        - !Ref myWebAppScaleGroup
+      AutoRollbackConfiguration:
+        Enabled: true
+        Events: 
+          - DEPLOYMENT_FAILURE
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce
+      DeploymentGroupName: csye6225-webapp-deployment
+      DeploymentStyle: 
+        DeploymentOption: WITH_TRAFFIC_CONTROL
+        DeploymentType: IN_PLACE
+      LoadBalancerInfo: 
+        TargetGroupInfoList:
+          - Name: !GetAtt myLoadBalancerTargetGroup.TargetGroupName
+      ServiceRoleArn: !GetAtt myCodeDeployRole.Arn
 
 Outputs:
   VpcId:

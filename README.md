@@ -12,9 +12,14 @@
 export AWS_PROFILE=dev
 ```
 
+- create git user stack
+```shell
+aws cloudformation create-stack --stack-name gituser --template-body file://CloudFormation/csye6225-infra-for-github.yml --capabilities CAPABILITY_NAMED_IAM --profile=demo
+```
+
 - create stack
 ```shell
-aws cloudformation create-stack --stack-name my-vpc --parameters ParameterKey=ImageId,ParameterValue=ami-09a73752624b96ca5 --template-body file://CloudFormation/csye6225-infra.yml --capabilities CAPABILITY_NAMED_IAM --profile=demo
+aws cloudformation create-stack --stack-name my-vpc --parameters ParameterKey=ImageId,ParameterValue=ami-00c9f1e91f6f6851a --template-body file://CloudFormation/csye6225-infra.yml --capabilities CAPABILITY_NAMED_IAM --profile=demo
 ```
 
 - delete stack(rm bucket objects at first)
