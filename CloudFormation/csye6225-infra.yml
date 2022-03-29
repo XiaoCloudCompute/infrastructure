@@ -485,7 +485,7 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref myLaunchTemplate
         Version: !GetAtt myLaunchTemplate.LatestVersionNumber
-      MaxSize: 3
+      MaxSize: 1
       MinSize: 1
       Tags:
         - Key: Application
