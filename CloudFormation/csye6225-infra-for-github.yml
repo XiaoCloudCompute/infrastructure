@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CSYE 6225 Github Actions
+Parameters:
+  AWSRegion:
+    Description: "aws region"
+    Type: String
+    Default: us-east-1
+  AWSAccountId:
+    Description: "aws account id"
+    Type: String
+    Default: "351248346419"
+Resources:
+  GithubS3Policy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Groups: 
+        - github
+      ManagedPolicyName: GithubS3Policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "s3:PutObject"
+              - "s3:PutObjectAcl"
+              - "s3:GetObject"
+              - "s3:GetObjectAcl"
+              - "s3:GetObjectAttributes"
+              - "s3:DeleteObject"
+              - "s3:List*"
+            Resource: 
+              - "arn:aws:s3:::codedeploy.huanlinxiao.me"
+              - "arn:aws:s3:::codedeploy.huanlinxiao.me/*"
+  GithubCallDeployPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Groups: 
+        - github
+      ManagedPolicyName: GithubCallDeployPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "codedeploy:RegisterApplicationRevision"
+              - "codedeploy:GetApplicationRevision" 
+            Resource:
+              - !Sub 
+                - "arn:aws:codedeploy:${AWS_REGION}:${AWS_ACCOUNT_ID}:application:csye6225-webapp"
+                - AWS_REGION: !Ref AWSRegion
+                  AWS_ACCOUNT_ID: !Ref AWSAccountId
+          - Effect: Allow
+            Action:
+              - "codedeploy:CreateDeployment"
+              - "codedeploy:GetDeployment" 
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - "codedeploy:GetDeploymentConfig"
+            Resource:
+              - !Sub 
+                - "arn:aws:codedeploy:${AWS_REGION}:${AWS_ACCOUNT_ID}:deploymentconfig:CodeDeployDefault.OneAtATime"
+                - AWS_REGION: !Ref AWSRegion
+                  AWS_ACCOUNT_ID: !Ref AWSAccountId
+              - !Sub 
+                - "arn:aws:codedeploy:${AWS_REGION}:${AWS_ACCOUNT_ID}:deploymentconfig:CodeDeployDefault.HalfAtATime"
+                - AWS_REGION: !Ref AWSRegion
+                  AWS_ACCOUNT_ID: !Ref AWSAccountId
+              - !Sub 
+                - "arn:aws:codedeploy:${AWS_REGION}:${AWS_ACCOUNT_ID}:deploymentconfig:CodeDeployDefault.AllAtOnce"
+                - AWS_REGION: !Ref AWSRegion
+                  AWS_ACCOUNT_ID: !Ref AWSAccountId
+  GithubAMIPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Groups: 
+        - github
+      ManagedPolicyName: GithubAMIPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "ec2:AttachVolume"
+              - "ec2:AuthorizeSecurityGroupIngress"
+              - "ec2:CopyImage"
+              - "ec2:CreateImage"
+              - "ec2:CreateKeypair"
+              - "ec2:CreateSecurityGroup"
+              - "ec2:CreateSnapshot"
+              - "ec2:CreateTags"
+              - "ec2:CreateVolume"
+              - "ec2:DeleteKeyPair"
+              - "ec2:DeleteSecurityGroup"
+              - "ec2:DeleteSnapshot"
+              - "ec2:DeleteVolume"
+              - "ec2:DeregisterImage"
+              - "ec2:DescribeImageAttribute"
+              - "ec2:DescribeImages"
+              - "ec2:DescribeInstances"
+              - "ec2:DescribeInstanceStatus"
+              - "ec2:DescribeRegions"
+              - "ec2:DescribeSecurityGroups"
+              - "ec2:DescribeSnapshots"
+              - "ec2:DescribeSubnets"
+              - "ec2:DescribeTags"
+              - "ec2:DescribeVolumes"
+              - "ec2:DetachVolume"
+              - "ec2:GetPasswordData"
+              - "ec2:ModifyImageAttribute"
+              - "ec2:ModifyInstanceAttribute"
+              - "ec2:ModifySnapshotAttribute"
+              - "ec2:RegisterImage"
+              - "ec2:RunInstances"
+              - "ec2:StopInstances"
+              - "ec2:TerminateInstances"
+            Resource: '*'
