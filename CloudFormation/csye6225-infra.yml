@@ -351,6 +351,7 @@ Resources:
               - "sts:AssumeRole"
       ManagedPolicyArns:
         - !Ref myIAMPolicy
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
   myInstanceProfile: 
     Type: "AWS::IAM::InstanceProfile"
     Properties: 

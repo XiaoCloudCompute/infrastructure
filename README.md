@@ -19,7 +19,7 @@ aws cloudformation create-stack --stack-name gituser --template-body file://Clou
 
 - create stack
 ```shell
-aws cloudformation create-stack --stack-name my-vpc --parameters ParameterKey=ImageId,ParameterValue=ami-00c9f1e91f6f6851a --template-body file://CloudFormation/csye6225-infra.yml --capabilities CAPABILITY_NAMED_IAM --profile=demo
+aws cloudformation create-stack --stack-name my-vpc --parameters ParameterKey=ImageId,ParameterValue=ami-0a432917e909fea81 --template-body file://CloudFormation/csye6225-infra.yml --capabilities CAPABILITY_NAMED_IAM --profile=demo
 ```
 
 - delete stack(rm bucket objects at first)
