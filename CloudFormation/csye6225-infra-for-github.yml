@@ -10,6 +10,76 @@ Parameters:
     Type: String
     Default: "351248346419"
 Resources:
+  GithubCloudformationPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Groups: 
+        - github
+      ManagedPolicyName: GithubCloudformationPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "cloudformation:CreateChangeSet"
+              - "cloudformation:DescribeChangeSet"
+              - "cloudformation:ExecuteChangeSet"
+              - "cloudformation:DescribeStackEvents"
+              - "cloudformation:DescribeStacks"
+              - "cloudformation:GetTemplateSummary"
+            Resource: "*"
+  GithubIAMPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Groups: 
+        - github
+      ManagedPolicyName: GithubIAMPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "iam:CreateRole"
+              - "iam:DetachRolePolicy"
+              - "iam:AttachRolePolicy"
+              - "iam:GetRole"
+              - "iam:DeleteRole"
+              - "iam:PassRole"
+              - "iam:PutRolePolicy"
+              - "iam:GetRolePolicy"
+              - "iam:DeleteRolePolicy"
+            Resource: "*"
+  GithubLambdaPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Groups: 
+        - github
+      ManagedPolicyName: GithubLambdaPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "lambda:CreateFunction"
+              - "lambda:DeleteFunction"
+              - "lambda:GetFunction"
+              - "lambda:AddPermission"
+              - "lambda:UpdateFunctionCode"
+            Resource: "*"
+  GithubSNSPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Groups: 
+        - github
+      ManagedPolicyName: GithubSNSPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "SNS:Subscribe"
+              - "SNS:Unsubscribe"
+            Resource: "*"
   GithubS3Policy:
     Type: 'AWS::IAM::ManagedPolicy'
     Properties:
