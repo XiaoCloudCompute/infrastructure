@@ -335,6 +335,32 @@ Resources:
               - !Sub ["arn:aws:s3:::${BUCKET_NAME}/*", BUCKET_NAME: !Ref myS3Bucket]
               - "arn:aws:s3:::codedeploy.huanlinxiao.me"
               - "arn:aws:s3:::codedeploy.huanlinxiao.me/*"
+  mySNSPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: SNS
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "sns:Publish"
+              - "sns:ListTopics"
+            Resource: 
+              - '*'
+  myDynamoDBPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: DynamoDB
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "dynamodb:GetItem"
+              - "dynamodb:PutItem"
+            Resource: 
+              - '*'
   ec2Role: 
     Type: "AWS::IAM::Role"
     Properties: 
@@ -351,6 +377,8 @@ Resources:
               - "sts:AssumeRole"
       ManagedPolicyArns:
         - !Ref myIAMPolicy
+        - !Ref mySNSPolicy
+        - !Ref myDynamoDBPolicy
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
   myInstanceProfile: 
     Type: "AWS::IAM::InstanceProfile"
@@ -465,6 +493,8 @@ Resources:
                 DATABASE_PASSWORD=${DATABASE_PASSWORD}
                 DATABASE_NAME=${DATABASE_NAME}
                 AWS_REGION=${AWS_REGION}
+                AWS_SNS_TOPIC_ARN=${AWS_SNS_TOPIC_ARN}
+                DOMAIN=${DOMAIN}
                 EOF
 
                 systemctl start web_service
@@ -475,6 +505,8 @@ Resources:
                 DATABASE_PASSWORD: !Ref DatabasePassword
                 DATABASE_NAME: !Ref DatabaseName
                 AWS_REGION: !Ref AWS::Region
+                AWS_SNS_TOPIC_ARN: !Ref mySNSTopic
+                DOMAIN: !Join ['.', [!Ref Env, "huanlinxiao.me"]]
   myWebAppScaleGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -602,6 +634,40 @@ Resources:
         TargetGroupInfoList:
           - Name: !GetAtt myLoadBalancerTargetGroup.TargetGroupName
       ServiceRoleArn: !GetAtt myCodeDeployRole.Arn
+  mySNSTopic:
+    Type: AWS::SNS::Topic
+    Properties: 
+      DisplayName: createUser
+      TopicName: createUser
+  myDynamoTableUsers:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      AttributeDefinitions: 
+        - AttributeName: username
+          AttributeType: S
+      KeySchema: 
+        - AttributeName: username
+          KeyType: HASH
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TableName: users
+      TimeToLiveSpecification: 
+        AttributeName: expire_time
+        Enabled: true
+  myDynamoTableTrack:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      AttributeDefinitions: 
+        - AttributeName: username
+          AttributeType: S
+      KeySchema: 
+        - AttributeName: username
+          KeyType: HASH
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TableName: track
 
 Outputs:
   VpcId:
