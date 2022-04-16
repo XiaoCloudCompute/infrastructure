@@ -233,10 +233,10 @@ Resources:
           - IpProtocol: "-1"
             CidrIp: 0.0.0.0/0
         SecurityGroupIngress:
-          # - IpProtocol: tcp
-          #   FromPort: 22
-          #   ToPort: 22
-          #   CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: 0.0.0.0/0
           - IpProtocol: tcp
             FromPort: 8080
             ToPort: 8080
@@ -294,16 +294,53 @@ Resources:
         - !Ref myFirstPrivateSubnet
         - !Ref mySecondPrivateSubnet
         - !Ref myThirdPrivateSubnet
+  myEC2KMSKey:
+    Type: AWS::KMS::Key
+    Properties: 
+      Description: Used for EC2 encryption
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-2
+        Statement:
+          - Sid: Enable IAM policies
+            Effect: Allow
+            Principal:
+              AWS: 
+                - 'arn:aws:iam::351248346419:user/demo'
+                - 'arn:aws:iam::351248346419:root'
+                - 'arn:aws:iam::351248346419:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling'
+                - !GetAtt ec2Role.Arn
+            Action: 'kms:*'
+            Resource: '*'
+      PendingWindowInDays: 7
+  myRDSKMSKey:
+    Type: AWS::KMS::Key
+    Properties: 
+      Description: Used for RDS encryption
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM policies
+            Effect: Allow
+            Principal:
+              AWS: 
+                - 'arn:aws:iam::351248346419:user/demo'
+                - 'arn:aws:iam::351248346419:root'
+            Action: 'kms:*'
+            Resource: '*'
+      PendingWindowInDays: 7
   myRDS:
     Type: AWS::RDS::DBInstance
     Properties: 
       AllocatedStorage: 20
       BackupRetentionPeriod: 0
-      DBInstanceClass: db.t2.micro
+      DBInstanceClass: db.t2.small
       DBInstanceIdentifier: cye6225
       DBName: cye6225
       DBParameterGroupName: !Ref myRDSDBParameterGroup
       DBSubnetGroupName: !Ref myDBSubnetGroup
+      DeleteAutomatedBackups: true
       Engine: mysql
       EngineVersion: "8.0.28"
       MasterUsername: !Ref DatabaseUsername
@@ -312,6 +349,8 @@ Resources:
       Port: "3306"
       PubliclyAccessible: "false"
       StorageType: "gp2"
+      KmsKeyId: !GetAtt myRDSKMSKey.Arn
+      StorageEncrypted: true
       VPCSecurityGroups: 
         - !Ref myDatabaseSecurityGroup
   myIAMPolicy:
@@ -430,9 +469,11 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref myLoadBalancerTargetGroup
+      Certificates:
+        - CertificateArn: arn:aws:acm:us-east-1:351248346419:certificate/2830a7cf-3775-46f3-be32-d5484f2be922
       LoadBalancerArn: !Ref myLoadBalancer
-      Port: 80
-      Protocol: HTTP
+      Port: 443
+      Protocol: HTTPS
   myLoadBalancerTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -467,6 +508,8 @@ Resources:
             Ebs:
               VolumeSize: 20
               VolumeType: "gp2"
+              Encrypted: true
+              KmsKeyId: !GetAtt myEC2KMSKey.Arn
               DeleteOnTermination: true
         NetworkInterfaces: 
           - AssociatePublicIpAddress: "true"
